@@ -17,7 +17,7 @@ LLVM_COMMIT="aa8d1afeed3714c2805bdf069ca273f00a789f31"   # keep in sync with Doc
 DIR="${REPO_DIR}/.toolchain"
 MEM_GB=$(( $(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 8388608) / 1048576 ))
 CPUS="$(nproc 2>/dev/null || echo 4)"
-JOBS=$(( MEM_GB < CPUS ? MEM_GB : CPUS ))     # ~1 GB RAM per compile job
+JOBS=$(( MEM_GB / 2 < CPUS ? MEM_GB / 2 : CPUS ))   # ~2 GB RAM per job; OOM can kill the session
 (( JOBS >= 1 )) || JOBS=1
 
 while [[ $# -gt 0 ]]; do

@@ -204,7 +204,7 @@ git checkout FETCH_HEAD && cd ..
 cmake -S llvm-project/llvm -B llvm-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DLLVM_ENABLE_PROJECTS="clang;mlir" -DCLANG_ENABLE_CIR=ON -DLLVM_TARGETS_TO_BUILD=host \
   -DLLVM_PARALLEL_LINK_JOBS=1
-ninja -C llvm-build clang                   # use -j N with N ≈ GB of RAM
+ninja -C llvm-build -j 3 clang              # ~2 GB RAM per job: 3 jobs for 8 GB
 export CLANG=$PWD/llvm-build/bin/clang
 ```
 

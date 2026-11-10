@@ -20,8 +20,10 @@ ARG CLANG_SOURCE=source
 FROM ubuntu:24.04 AS clang-source
 ARG LLVM_COMMIT
 ARG CLANG_MAJOR
-# Parallel compile jobs. LLVM needs ~1 GB RAM per job; lower this on small machines.
-ARG BUILD_JOBS=6
+# Parallel compile jobs. Budget ~2 GB RAM per job (linking clang alone needs a few
+# GB); 3 is safe on an 8 GB machine. Raise it with --build-arg BUILD_JOBS=N if you
+# have more memory. Running out of memory can kill the whole WSL/VM session.
+ARG BUILD_JOBS=3
 RUN apt-get update \
  && apt-get install -y --no-install-recommends build-essential cmake ninja-build python3 git ca-certificates \
  && rm -rf /var/lib/apt/lists/*
