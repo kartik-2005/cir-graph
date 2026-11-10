@@ -15,7 +15,8 @@ The graph carries the program's semantics:
 
 It does **not** carry the source text: no comments and no source lines, which a
 test enforces. The model sees identifiers, types, literals, IR operations and
-file/line locations.
+file/line locations, with paths relative to the project so
+your user name and folder layout never reach the model.
 
 The graph is stored in an embedded [Kùzu](https://kuzudb.com) database, which a
 model or tool can query with Cypher. It is also exported as layered JSON for
@@ -67,7 +68,7 @@ suit a model's tool calls; see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#large
 ## 60-second quickstart (no LLVM needed)
 
 ```sh
-git clone <this-repo> cir-graph && cd cir-graph
+# from the root of a clone of this repo
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e .                       # installs kuzu==0.11.3 and the cir-graph commands
 
@@ -91,7 +92,7 @@ don't have it. Pick one of three ways to get it:
 ### Option A: Docker (recommended; nothing else to install)
 
 ```sh
-git clone <this-repo> cir-graph
+# cir-graph/ is your clone of this repo
 cir-graph/cir-graph-docker build            # once: builds the image, clang compiled from source (1-3 h)
 
 cd ~/my-project                             # any directory with your code
@@ -101,16 +102,17 @@ cd ~/my-project                             # any directory with your code
 
 * `cir-graph-docker` takes the same arguments as `analyze.sh`.
 * It mounts the current directory into the container, so your files and
-  `./artifacts` stay on your machine and are owned by you.
+  `./artifacts` stay on your machine and are owned by you. Inputs and `-I`
+  directories outside it are mounted read-only automatically.
 * Subcommands: `query …`, `load …`, `cir …` (prebuilt `.cir` files), `shell`.
 * Symlink it onto your `PATH` to run it from anywhere.
 * The graphs are byte-identical to a native run on the same files.
 
 Already have a CIR-enabled LLVM build? Make the image in minutes from it:
 `cir-graph-docker build --prebuilt ~/llvm-project/build`. To share the image
-without anyone rebuilding it, push it to a registry and set
-`CIR_GRAPH_IMAGE=ghcr.io/<owner>/cir-graph:latest`; the wrapper pulls it
-automatically.
+without anyone rebuilding it, push it to a container registry and have users
+set `CIR_GRAPH_IMAGE` to that image name; the wrapper pulls it automatically
+(see [docs/USAGE.md](docs/USAGE.md#docker-cir-graph-docker)).
 
 ### Option B: build the compiler locally (no Docker)
 
@@ -215,7 +217,7 @@ export CLANG=$PWD/llvm-build/bin/clang
 ## Tests
 
 ```sh
-python3 -m unittest discover -s tests -v                 # 79 tests, no LLVM needed
+python3 -m unittest discover -s tests -v                 # 80 tests, no LLVM needed
 CLANG=/path/to/clang python3 -m unittest discover -s tests   # also runs the source→graph tests
 ```
 
@@ -252,3 +254,7 @@ verifier.
 
 See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) before relying on a missing edge
 as proof of independence.
+
+## Authors
+
+Kartik Maheshwari · Atharv Agarwal

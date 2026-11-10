@@ -496,6 +496,30 @@ class PipelineTests(unittest.TestCase):
         finally:
             shutil.rmtree(out, ignore_errors=True)
 
+    def test_analyze_records_project_relative_paths_only(self):
+        # Graphs must not carry the analyst's machine layout (user name, checkout
+        # path), but string literals are program data and must survive unchanged.
+        project = Path(tempfile.mkdtemp(prefix="cir-graph-paths-")).resolve()
+        try:
+            (project / "src").mkdir()
+            literal = f"{project}/src/data.txt"
+            (project / "src" / "main.c").write_text(
+                f'const char *path = "{literal}";\nint main(void) {{ return path[0] == 0; }}\n')
+            env = dict(os.environ, CLANG=_find_clang(), PYTHON=sys.executable)
+            subprocess.run(["bash", str(REPO / "analyze.sh"), "src/main.c", "--output-dir", "out",
+                            "--program-id", "paths", "--no-svg"],
+                           check=True, env=env, capture_output=True, text=True, cwd=project)
+            data = json.loads((project / "out" / "graph.json").read_text())
+            self.assertEqual([tu["sourceFile"] for tu in data["layers"]["macro"]["translationUnits"]],
+                             ["src/main.c"])
+            for name in ("graph.json", "graph.cypher", "graph.dot"):
+                text = (project / "out" / name).read_text()
+                self.assertEqual(text.count(str(project)), text.count(literal), name)
+            self.assertIn(literal, json.dumps(data))
+            self.assertIn("location: 'src/main.c:", (project / "out" / "graph.cypher").read_text())
+        finally:
+            shutil.rmtree(project, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()

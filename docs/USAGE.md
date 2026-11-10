@@ -32,21 +32,23 @@ cir-graph-docker load out.cypher --database other.kuzu # cir-graph-load
 cir-graph-docker shell                                 # bash in the image
 ```
 
-* The current directory is mounted at the **same path** inside the container,
-  so relative and absolute paths under it work unchanged. Files outside it are
-  rejected with a message: `cd` to a common parent first.
+* The current directory is mounted (read-write) at the **same path** inside the
+  container, and outputs must be written under it.
+* Inputs elsewhere, such as `../lib/util.c` or `-I ../shared/include`, are
+  mounted **read-only** automatically. Symlinks are resolved first.
 * The container runs as your user, so outputs are owned by you.
 * Graphs are byte-identical to a native run with the same clang.
-* `CIR_GRAPH_IMAGE` selects another image. If the name includes a registry (for
-  example `ghcr.io/<owner>/cir-graph:latest`), the image is pulled when missing.
+* `CIR_GRAPH_IMAGE` selects another image. If the name includes a registry host
+  (it contains a `/`), the image is pulled when missing.
 * The image build runs the whole test suite against its own clang, so a broken
   image fails to build instead of producing wrong graphs.
 
 Publishing the image once saves everyone else the build:
 
 ```sh
-docker tag cir-graph:latest ghcr.io/<owner>/cir-graph:latest
-docker push ghcr.io/<owner>/cir-graph:latest
+IMAGE=registry.example.com/cir-graph:latest     # any registry your users can pull from
+docker tag cir-graph:latest "$IMAGE" && docker push "$IMAGE"
+# users then run:  CIR_GRAPH_IMAGE=$IMAGE cir-graph-docker src/*.c
 ```
 
 ## analyze.sh: one-shot runner
@@ -69,6 +71,7 @@ docker push ghcr.io/<owner>/cir-graph:latest
 | `--database PATH` | Kùzu database (default: `<output-dir>/graph.kuzu`) |
 | `--no-database` | skip the Kùzu import; `kuzu` is then not required |
 | `--no-svg` | do not render `graph.svg` (useful for large programs) |
+| `--absolute-paths` | keep clang's absolute source paths in the graph (see below) |
 | `--reset` | delete the database first (needed after a schema change) |
 | `--entry NAME` | extra entry point for dead-code analysis (repeatable) |
 | `--std STD` | language standard (default `c11` for `.c`, `c++20` otherwise) |
@@ -99,6 +102,20 @@ Examples:
 ```
 
 C and C++ can be mixed in one program; each file's language follows its extension.
+
+**Paths in the graph.** clang records every source file's absolute path. Before
+building the graph, `analyze.sh` rewrites those paths:
+
+* files under the current directory become relative (`src/main.c`, and locations
+  like `src/main.c:12:3`);
+* other files under your home directory become `~/…`;
+* system headers keep their standard paths (`/usr/include/…`).
+
+Only the module name and source locations are rewritten. String literals in your
+code are program data and stay exactly as written. The graph therefore never
+carries your user name or checkout location, and the same project gives the same
+graph on any machine. Pass `--absolute-paths` to keep clang's original paths.
+`.cir` files you pass in yourself are used unchanged.
 
 ## cir-graph: build a graph from .cir files
 

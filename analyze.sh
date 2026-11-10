@@ -27,6 +27,8 @@ Options:
   --database PATH     Kùzu database (default: <output-dir>/graph.kuzu)
   --no-database       skip the Kùzu import (Cypher/JSON/DOT only; kuzu not required)
   --no-svg            do not render graph.svg even if Graphviz is installed
+  --absolute-paths    keep clang's absolute source paths in the graph (default: paths
+                      relative to the current directory; others under \$HOME become ~/...)
   --reset             delete the database first (needed after schema changes)
   --entry NAME        extra entry point for dead-code analysis (repeatable)
   --std STD           language standard (default: c11 for .c, c++20 otherwise)
@@ -54,6 +56,7 @@ OUT_DIR="artifacts"
 DATABASE=""
 USE_DB=true
 USE_SVG=true
+ABSOLUTE_PATHS=false
 STD=""
 
 while [[ $# -gt 0 ]]; do
@@ -64,6 +67,7 @@ while [[ $# -gt 0 ]]; do
         --database) DATABASE="$2"; shift 2 ;;
         --no-database) USE_DB=false; shift ;;
         --no-svg) USE_SVG=false; shift ;;
+        --absolute-paths) ABSOLUTE_PATHS=true; shift ;;
         --reset) GEN_FLAGS+=("--reset"); shift ;;
         --entry) GEN_FLAGS+=("--entry" "$2"); shift 2 ;;
         --std) STD="$2"; shift 2 ;;
@@ -90,7 +94,7 @@ for input in "${INPUTS[@]}"; do
         else
             info "${input}: using ${#found[@]} pre-compiled .cir file(s); pass sources explicitly to recompile"
         fi
-        SOURCES+=("${found[@]}")
+        SOURCES+=(${found[@]+"${found[@]}"})
     elif [[ -f "${input}" ]]; then
         SOURCES+=("${input}")
     else
@@ -171,9 +175,33 @@ fi
 mkdir -p "${OUT_DIR}"
 CIR_DIR="${OUT_DIR}/cir/${PROGRAM_ID}"
 
+# clang records each source's absolute path (module name and loc(...) entries),
+# and the graph copies it into sourceFile / locations. Rewrite those two spots only
+# (never string literals) so graphs carry project-relative paths: no user names or
+# machine layout, and identical graphs wherever the project is checked out.
+WORK_ROOTS=("$(pwd -P)" "${PWD}")
+HOST_HOME="${CIR_GRAPH_HOME:-${HOME:-}}"
+relativize_paths() {
+    [[ "${ABSOLUTE_PATHS}" == true ]] && return 0
+    "${PYTHON_BIN}" - "$1" "${HOST_HOME}" "${WORK_ROOTS[@]}" <<'PY'
+import sys
+path, home, *roots = sys.argv[1:]
+with open(path, encoding="utf-8") as handle:
+    text = handle.read()
+replacements = [(root.rstrip("/") + "/", "") for root in dict.fromkeys(roots) if root.strip("/")]
+if home.strip("/"):
+    replacements.append((home.rstrip("/") + "/", "~/"))
+for prefix in ('module @"', 'loc("'):
+    for old, new in replacements:          # project root first, then home
+        text = text.replace(prefix + old, prefix + new)
+with open(path, "w", encoding="utf-8") as handle:
+    handle.write(text)
+PY
+}
+
 # --- compile each translation unit to raw (structured) CIR ------------------
 CIR_FILES=()
-declare -A SEEN_STEMS=()
+SEEN_STEMS=$'\n'          # newline-separated (bash 3.2 has no associative arrays)
 for src in "${SOURCES[@]}"; do
     if [[ "${src}" == *.cir ]]; then
         CIR_FILES+=("${src}")
@@ -183,11 +211,11 @@ for src in "${SOURCES[@]}"; do
     stem="$(basename "${src%.*}")"
     base_stem="${stem}"
     suffix=1
-    while [[ -n "${SEEN_STEMS[${stem}]:-}" ]]; do
+    while [[ "${SEEN_STEMS}" == *$'\n'"${stem}"$'\n'* ]]; do
         suffix=$(( suffix + 1 ))
         stem="${base_stem}_${suffix}"
     done
-    SEEN_STEMS[${stem}]=1
+    SEEN_STEMS+="${stem}"$'\n'
     std="${STD}"
     if [[ -z "${std}" ]]; then
         case "${src}" in *.c) std="c11" ;; *) std="c++20" ;; esac
@@ -195,7 +223,8 @@ for src in "${SOURCES[@]}"; do
     out="${CIR_DIR}/${stem}.cir"
     info "${src} -> ${out}"
     "${CLANG_BIN}" -c "-std=${std}" -Xclang -emit-cir -Xclang -clangir-disable-passes \
-        "${CLANG_FLAGS[@]}" "${src}" -o "${out}"
+        ${CLANG_FLAGS[@]+"${CLANG_FLAGS[@]}"} "${src}" -o "${out}"
+    relativize_paths "${out}"
     CIR_FILES+=("${out}")
 done
 
@@ -206,7 +235,7 @@ if [[ "${USE_DB}" == true ]]; then
     ARGS+=(--database "${DATABASE:-${OUT_DIR}/graph.kuzu}")
 fi
 PYTHONPATH="${REPO_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}" \
-    "${PYTHON_BIN}" -m cir_graph.cli "${ARGS[@]}" "${GEN_FLAGS[@]}"
+    "${PYTHON_BIN}" -m cir_graph.cli "${ARGS[@]}" ${GEN_FLAGS[@]+"${GEN_FLAGS[@]}"}
 
 if [[ "${USE_SVG}" == true ]]; then
     if command -v dot >/dev/null 2>&1; then

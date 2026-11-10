@@ -29,7 +29,11 @@ WORKDIR /src
 RUN git init -q llvm-project \
  && git -C llvm-project fetch -q --depth 1 https://github.com/llvm/llvm-project.git "${LLVM_COMMIT}" \
  && git -C llvm-project checkout -q FETCH_HEAD
-RUN cmake -S llvm-project/llvm -B build -G Ninja \
+# The build directory lives in a BuildKit cache mount, so an interrupted build
+# (closed terminal, reboot, out of memory) resumes where it stopped on the next
+# `docker build` instead of starting over.
+RUN --mount=type=cache,id=cir-graph-llvm-build,target=/src/build \
+    cmake -S llvm-project/llvm -B build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
       -DLLVM_ENABLE_ASSERTIONS=OFF \
       -DLLVM_ENABLE_PROJECTS="clang;mlir" \
@@ -42,8 +46,7 @@ RUN cmake -S llvm-project/llvm -B build -G Ninja \
  && mkdir -p /opt/clang/bin /opt/clang/lib/clang \
  && cp "build/bin/clang-${CLANG_MAJOR}" /opt/clang/bin/ \
  && strip "/opt/clang/bin/clang-${CLANG_MAJOR}" \
- && cp -r "build/lib/clang/${CLANG_MAJOR}" /opt/clang/lib/clang/ \
- && rm -rf build
+ && cp -r "build/lib/clang/${CLANG_MAJOR}" /opt/clang/lib/clang/
 
 # ------------------------------------------------- clang: reuse an existing build dir
 FROM ubuntu:24.04 AS clang-prebuilt

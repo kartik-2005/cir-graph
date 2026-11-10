@@ -12,8 +12,14 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLANG_BIN="${CLANG:-${HOME}/llvm-project/build/bin/clang}"
-[[ -x "${CLANG_BIN}" ]] || { echo "[-] set CLANG to a CIR-enabled clang" >&2; exit 1; }
+CLANG_BIN="${CLANG:-}"
+if [[ -z "${CLANG_BIN}" ]]; then
+    for candidate in "${HERE}/../.toolchain/build/bin/clang" "${HOME}/llvm-project/build/bin/clang"; do
+        [[ -x "${candidate}" ]] && { CLANG_BIN="${candidate}"; break; }
+    done
+fi
+[[ -n "${CLANG_BIN}" && -x "${CLANG_BIN}" ]] || {
+    echo "[-] set CLANG to a CIR-enabled clang (or build one: scripts/build-clang.sh)" >&2; exit 1; }
 
 if [[ $# -gt 0 ]]; then CASES=("$@"); else
     CASES=(); for dir in "${HERE}"/cases/*/; do CASES+=("$(basename "${dir}")"); done
@@ -37,7 +43,8 @@ for name in "${CASES[@]}"; do
             "${CLANG_BIN}" -c "-std=${std}" -Xclang -emit-cir -Xclang -clangir-disable-passes \
                 -I . "${src}" -o "${src%.*}.cir"
             # clang records the absolute source path in the module name; keep fixtures portable.
-            sed -i "s|${case_dir}/||g" "${src%.*}.cir"
+            sed "s|${case_dir}/||g" "${src%.*}.cir" > "${src%.*}.cir.tmp"   # portable (no sed -i)
+            mv "${src%.*}.cir.tmp" "${src%.*}.cir"
         done
         # Native build + run: each program checks its own result and exits 0.
         driver="${CLANG_BIN}"
