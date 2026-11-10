@@ -85,22 +85,61 @@ cir-graph-query callsites first
 
 ## Analyzing your own C/C++ code
 
-Compiling C/C++ to CIR needs a clang built with CIR enabled; see the section
-[below](#building-a-cir-enabled-clang). Once you have one:
+Turning C/C++ into CIR needs a clang built with CIR enabled. Stock clang packages
+don't have it. Pick one of three ways to get it:
+
+### Option A: Docker (recommended; nothing else to install)
+
+```sh
+git clone <this-repo> cir-graph
+cir-graph/cir-graph-docker build            # once: builds the image, clang compiled from source (1-3 h)
+
+cd ~/my-project                             # any directory with your code
+~/cir-graph/cir-graph-docker src/*.c -I include --program-id mylib
+~/cir-graph/cir-graph-docker query summary  # results are in ./artifacts/
+```
+
+* `cir-graph-docker` takes the same arguments as `analyze.sh`.
+* It mounts the current directory into the container, so your files and
+  `./artifacts` stay on your machine and are owned by you.
+* Subcommands: `query …`, `load …`, `cir …` (prebuilt `.cir` files), `shell`.
+* Symlink it onto your `PATH` to run it from anywhere.
+* The graphs are byte-identical to a native run on the same files.
+
+Already have a CIR-enabled LLVM build? Make the image in minutes from it:
+`cir-graph-docker build --prebuilt ~/llvm-project/build`. To share the image
+without anyone rebuilding it, push it to a registry and set
+`CIR_GRAPH_IMAGE=ghcr.io/<owner>/cir-graph:latest`; the wrapper pulls it
+automatically.
+
+### Option B: build the compiler locally (no Docker)
+
+```sh
+cir-graph/scripts/build-clang.sh            # once: 1-3 h, ~8 GB RAM, ~30 GB disk
+cir-graph/analyze.sh src/*.c -I include     # finds .toolchain/build/bin/clang automatically
+```
+
+### Option C: you already have a CIR-enabled clang
 
 ```sh
 export CLANG=/path/to/llvm-project/build/bin/clang
 ./analyze.sh examples/demo/main.cpp examples/demo/math.cpp --program-id demo
 ./analyze.sh examples/demo_c/main.c examples/demo_c/stack.c --program-id stack
-./analyze.sh -I include src/*.c --program-id mylib --no-svg
 ```
 
-* Each source file is compiled separately, one translation unit each, and then
-  all TUs are linked.
-* `analyze.sh` checks that the compiler really supports `-emit-cir`. A stock
-  system clang is rejected with a clear message.
-* If you already have `.cir` files (for example, made on another machine that
-  has the compiler), pass them directly; no clang is needed.
+Either way:
+
+* Each source file is compiled separately (one translation unit each), then all
+  TUs are linked.
+* `analyze.sh` checks that the compiler really supports `-emit-cir`, and rejects
+  a stock clang with instructions.
+* Already have `.cir` files (made anywhere with the compiler)? Pass them
+  directly; no clang is needed.
+* Language coverage: C (including varargs, atomics, VLAs, unions and setjmp) and
+  C++ (classes, virtual calls, exceptions, lambdas, STL containers, iostream,
+  coroutines) compile and produce graphs. ClangIR is still being completed
+  upstream, so rarer constructs can still fail with a "not yet implemented"
+  error (see [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md#l03)).
 
 ```text
 [+] Program 'demo': 2 TU(s), 8 defined + 0 external function(s)
@@ -127,6 +166,7 @@ browsing the graph visually in Kùzu Explorer, see
 
 | Command | Purpose |
 |---|---|
+| `cir-graph-docker [opts] <sources/.cir/dirs>` | same as `analyze.sh`, run in Docker on the current directory; also `query`, `load`, `cir`, `shell`, `build` |
 | `./analyze.sh [opts] <sources/.cir/dirs>` | one shot: compile (if needed) → graph → DB, Cypher, JSON, DOT, SVG |
 | `cir-graph <.cir…> [--database] [--output] [--json] [--dot]` | build a graph from CIR files |
 | `cir-graph-query <command> [target]` | `summary`, `functions`, `calls`, `cycles`, `dead`, `entry`, `cfg`, `ops`, `flows`, `callsites`, `trace`, `cypher` |
@@ -151,26 +191,26 @@ A conda environment with all of the above except clang:
 
 ## Building a CIR-enabled clang
 
-CIR is part of upstream LLVM but is **off by default**, and prebuilt clang
-packages are generally built without it. A one-time build of clang alone takes roughly
-30–90 minutes, depending on cores and RAM:
+CIR is part of upstream LLVM but is **off by default**. Use
+`scripts/build-clang.sh` (Option B above) or the `Dockerfile` (Option A); both
+build the same configuration. To do it by hand:
 
 ```sh
-git clone --depth 1 https://github.com/llvm/llvm-project.git
-cmake -S llvm-project/llvm -B llvm-project/build -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON \
-  -DLLVM_ENABLE_PROJECTS="clang;mlir" -DCLANG_ENABLE_CIR=ON \
-  -DLLVM_TARGETS_TO_BUILD=host
-ninja -C llvm-project/build clang
-export CLANG=$PWD/llvm-project/build/bin/clang
+git init llvm-project && cd llvm-project
+git fetch --depth 1 https://github.com/llvm/llvm-project.git aa8d1afeed3714c2805bdf069ca273f00a789f31
+git checkout FETCH_HEAD && cd ..
+cmake -S llvm-project/llvm -B llvm-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS="clang;mlir" -DCLANG_ENABLE_CIR=ON -DLLVM_TARGETS_TO_BUILD=host \
+  -DLLVM_PARALLEL_LINK_JOBS=1
+ninja -C llvm-build clang                   # use -j N with N ≈ GB of RAM
+export CLANG=$PWD/llvm-build/bin/clang
 ```
 
-* The parser is tested against the compiler recorded in
-  [`testbench/CLANG_VERSION`](testbench/CLANG_VERSION). CIR's text format still
-  changes upstream, so check out that commit if a newer one fails to parse.
-* To share the cost, build clang once (on a workstation, a CI job or a container
-  image) and hand `.cir` files or the `clang` binary to everyone else. cir-graph
-  itself never needs LLVM.
+* **Use the pinned commit.** CIR's text format still changes upstream. The
+  parser and the committed testbench CIR are validated against
+  [`testbench/CLANG_VERSION`](testbench/CLANG_VERSION).
+* **One build serves everyone.** Build once, then hand out the Docker image,
+  the `clang` binary, or `.cir` files. cir-graph itself never needs LLVM.
 
 ## Tests
 
@@ -187,7 +227,10 @@ CLANG=/path/to/clang python3 -m unittest discover -s tests   # also runs the sou
 ## Repository layout
 
 ```
-analyze.sh            one-shot runner
+analyze.sh            one-shot runner (native)
+cir-graph-docker      the same, in Docker, on the current directory
+Dockerfile            image with cir-graph + CIR-enabled clang (from source or an existing build)
+scripts/build-clang.sh  build the pinned CIR-enabled clang into .toolchain/ (no Docker)
 src/cir_graph/        engine: parser, CFG/DFG builder, memory model, linker, Kùzu schema,
                       exporters, CLI, query tool; public_api/ for optional declaration metadata
 tests/                unit and regression tests (+ fixtures/stress)

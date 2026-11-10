@@ -34,8 +34,9 @@ Options:
   -h, --help          show this help
 
 Environment:
-  CLANG       CIR-enabled clang (otherwise: \$LLVM_BUILD/bin/clang,
-              ~/llvm-project/build/bin/clang, then clang on PATH — each is probed)
+  CLANG       CIR-enabled clang (otherwise: \$LLVM_BUILD/bin/clang, <repo>/.toolchain/build/bin/clang
+              from scripts/build-clang.sh, ~/llvm-project/build/bin/clang, then clang on
+              PATH; each is probed for -emit-cir support)
   PYTHON      Python interpreter with the 'kuzu' package
 EOF
 }
@@ -121,6 +122,7 @@ if [[ "${NEED_CLANG}" == true ]]; then
         CLANG_BIN="${CLANG}"
     else
         for candidate in "${LLVM_BUILD:-/nonexistent}/bin/clang" \
+                         "${REPO_DIR}/.toolchain/build/bin/clang" \
                          "${HOME}/llvm-project/build/bin/clang" \
                          "$(command -v clang 2>/dev/null || true)"; do
             if [[ -n "${candidate}" ]] && supports_cir "${candidate}"; then
@@ -130,10 +132,11 @@ if [[ "${NEED_CLANG}" == true ]]; then
     fi
     if [[ -z "${CLANG_BIN}" ]]; then
         cat >&2 <<EOF
-[-] No CIR-enabled clang found, but C/C++ sources were given.
-    Either:
-      * point CLANG at a clang built with -DCLANG_ENABLE_CIR=ON
-        (see "Building a CIR-enabled clang" in README.md), or
+[-] No CIR-enabled clang found, but C/C++ sources were given. Either:
+      * run in Docker instead (image includes the compiler):
+        ${REPO_DIR}/cir-graph-docker <same arguments>
+      * build the compiler once (1-3 h):  ${REPO_DIR}/scripts/build-clang.sh
+      * point CLANG at a clang built with -DCLANG_ENABLE_CIR=ON, or
       * pass pre-compiled .cir files instead (no LLVM needed), e.g.
         $(basename "$0") testbench/cases/10_three_tu_chain
 EOF

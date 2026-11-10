@@ -26,3 +26,6 @@ artifacts/
 *.cir
 !testbench/cases/**/*.cir
 !tests/fixtures/**/*.cir
+
+# Local CIR-enabled clang from scripts/build-clang.sh
+.toolchain/

@@ -1,0 +1,9 @@
+.git
+.github
+.venv
+.conda-env
+artifacts
+**/__pycache__
+*.egg-info
+*.kuzu
+.toolchain
