@@ -156,7 +156,7 @@ Without `pip install`, use `PYTHONPATH=src python3 -m cir_graph.cli` (or
 
 | Needed for | Requirement |
 |---|---|
-| everything | Python ≥ 3.9 (tested with 3.12) |
+| everything | Python ≥ 3.9 (tested on 3.9, 3.10, 3.12 and 3.13) |
 | database and queries | `kuzu==0.11.3` (`pip install -r requirements.txt`) |
 | readable C++ names | `c++filt` or `llvm-cxxfilt` (binutils) |
 | `graph.svg` (optional) | Graphviz `dot` |
