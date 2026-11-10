@@ -137,9 +137,7 @@ if [[ "${NEED_CLANG}" == true ]]; then
     if [[ -z "${CLANG_BIN}" ]]; then
         cat >&2 <<EOF
 [-] No CIR-enabled clang found, but C/C++ sources were given. Either:
-      * run in Docker instead (image includes the compiler):
-        ${REPO_DIR}/cir-graph-docker <same arguments>
-      * build the compiler once (1-3 h):  ${REPO_DIR}/scripts/build-clang.sh
+      * build the compiler once (a few hours):  ${REPO_DIR}/scripts/build-clang.sh
       * point CLANG at a clang built with -DCLANG_ENABLE_CIR=ON, or
       * pass pre-compiled .cir files instead (no LLVM needed), e.g.
         $(basename "$0") testbench/cases/10_three_tu_chain

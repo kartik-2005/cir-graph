@@ -21,7 +21,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
       - name: Shell syntax
-        run: bash -n analyze.sh cir-graph-docker scripts/build-clang.sh testbench/regenerate.sh
+        run: bash -n analyze.sh scripts/build-clang.sh testbench/regenerate.sh
       - name: Unit tests and testbench (committed CIR, no LLVM build)
         run: python -m unittest discover -s tests -v
       - name: analyze.sh smoke test

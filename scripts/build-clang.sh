@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Build the CIR-enabled clang that cir-graph is validated against, without Docker.
+# Build the CIR-enabled clang that cir-graph is validated against.
 #
 #   scripts/build-clang.sh [--jobs N] [--dir DIR]
 #
@@ -8,12 +8,12 @@
 # <repo>/.toolchain/build/bin/clang automatically, so after this one-time build
 #   ./analyze.sh my_code/*.c
 # just works. Needs: git, cmake, ninja, a C++17 compiler, ~8 GB RAM, ~30 GB disk.
-# Takes roughly 1-3 hours. Re-running resumes an interrupted build.
+# Takes a few hours (fewer with more RAM/cores). Re-running resumes an interrupted build.
 # ==============================================================================
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-LLVM_COMMIT="aa8d1afeed3714c2805bdf069ca273f00a789f31"   # keep in sync with Dockerfile
+LLVM_COMMIT="aa8d1afeed3714c2805bdf069ca273f00a789f31"   # keep in sync with testbench/CLANG_VERSION
 DIR="${REPO_DIR}/.toolchain"
 MEM_GB=$(( $(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 8388608) / 1048576 ))
 CPUS="$(nproc 2>/dev/null || echo 4)"

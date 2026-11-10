@@ -1,6 +1,5 @@
 # Usage
 
-* [Docker: cir-graph-docker](#docker-cir-graph-docker)
 * [analyze.sh: one-shot runner](#analyzesh-one-shot-runner)
 * [cir-graph: build a graph from .cir files](#cir-graph-build-a-graph-from-cir-files)
 * [Producing CIR yourself](#producing-cir-yourself)
@@ -13,43 +12,6 @@
 All commands below run from the repository root. Without `pip install -e .`,
 replace `cir-graph …` with `PYTHONPATH=src python3 -m cir_graph.cli …` (and
 likewise `cir_graph.query`, `cir_graph.load`).
-
-## Docker: cir-graph-docker
-
-`cir-graph-docker` runs everything inside an image that contains cir-graph, a
-CIR-enabled clang, C/C++ system headers, `c++filt` and Graphviz.
-
-```sh
-cir-graph-docker build                                 # once; compiles clang from source (1-3 h)
-cir-graph-docker build --prebuilt ~/llvm-project/build # or reuse an existing CIR build (minutes)
-
-cd ~/my-project
-cir-graph-docker src/*.c -I include --program-id mylib # same options as analyze.sh
-cir-graph-docker query summary                         # cir-graph-query on ./artifacts/graph.kuzu
-cir-graph-docker query cfg main
-cir-graph-docker cir build/*.cir --json out.json       # cir-graph on existing .cir files
-cir-graph-docker load out.cypher --database other.kuzu # cir-graph-load
-cir-graph-docker shell                                 # bash in the image
-```
-
-* The current directory is mounted (read-write) at the **same path** inside the
-  container, and outputs must be written under it.
-* Inputs elsewhere, such as `../lib/util.c` or `-I ../shared/include`, are
-  mounted **read-only** automatically. Symlinks are resolved first.
-* The container runs as your user, so outputs are owned by you.
-* Graphs are byte-identical to a native run with the same clang.
-* `CIR_GRAPH_IMAGE` selects another image. If the name includes a registry host
-  (it contains a `/`), the image is pulled when missing.
-* The image build runs the whole test suite against its own clang, so a broken
-  image fails to build instead of producing wrong graphs.
-
-Publishing the image once saves everyone else the build:
-
-```sh
-IMAGE=registry.example.com/cir-graph:latest     # any registry your users can pull from
-docker tag cir-graph:latest "$IMAGE" && docker push "$IMAGE"
-# users then run:  CIR_GRAPH_IMAGE=$IMAGE cir-graph-docker src/*.c
-```
 
 ## analyze.sh: one-shot runner
 
