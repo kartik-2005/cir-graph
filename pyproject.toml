@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cir-graph"
+version = "0.1.0"
+description = "Whole-program knowledge graphs (call graph + CFG + data flow) from Clang IR, stored in Kùzu"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["kuzu==0.11.3"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Compilers",
+]
+
+[project.scripts]
+cir-graph = "cir_graph.cli:main"
+cir-graph-query = "cir_graph.query:main"
+cir-graph-load = "cir_graph.load:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

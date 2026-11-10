@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.conda-env/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Analysis output (analyze.sh writes to ./artifacts by default)
+artifacts/
+*.kuzu
+*.kuzu.wal
+*.kuzu.lock
+*.dot
+*.svg
+
+# Generated CIR outside the committed testbench / fixtures
+*.cir
+!testbench/cases/**/*.cir
+!tests/fixtures/**/*.cir

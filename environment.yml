@@ -1,0 +1,12 @@
+# conda env create -f environment.yml && conda activate cir-graph
+name: cir-graph
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - binutils       # c++filt, used to demangle C++ symbol names
+  - graphviz       # optional: renders graph.svg
+  - pip:
+      - kuzu==0.11.3
+      - -e .

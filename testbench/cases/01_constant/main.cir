@@ -1,0 +1,20 @@
+!s32i = !cir.int<s, 32>
+module @"main.cpp" attributes {cir.default_tls_model = #cir.tls_model<tls_dyn>, cir.lang = #cir.lang<cxx>, cir.module_asm = [], cir.triple = "x86_64-unknown-linux-gnu", dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vector<4xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little", "dlti.mangling_mode" = "e", "dlti.legal_int_widths" = array<i32: 8, 16, 32, 64>, "dlti.stack_alignment" = 128 : i64, !cir.ptr<!cir.void> = #cir.ptr_spec<size = 64, abi = 64, preferred = 64, index = 64>>} {
+  cir.func no_inline dso_local @main() -> (!s32i {llvm.noundef}) attributes {"cir.target-cpu" = "x86-64", "cir.target-features" = "+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87", "cir.tune-cpu" = "generic"} {
+    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i> loc(#loc2)
+    %1 = cir.const #cir.int<0> : !s32i loc(#loc3)
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i> loc(#loc3)
+    %2 = cir.const #cir.int<0> : !s32i loc(#loc4)
+    cir.store %2, %0 : !s32i, !cir.ptr<!s32i> loc(#loc7)
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i loc(#loc7)
+    cir.return %3 : !s32i loc(#loc7)
+  } loc(#loc6)
+} loc(#loc)
+#loc = loc("main.cpp":0:0)
+#loc1 = loc("main.cpp":1:1)
+#loc2 = loc("main.cpp":1:24)
+#loc3 = loc("main.cpp":1:12)
+#loc4 = loc("main.cpp":1:21)
+#loc5 = loc("main.cpp":1:14)
+#loc6 = loc(fused[#loc1, #loc2])
+#loc7 = loc(fused[#loc5, #loc4])

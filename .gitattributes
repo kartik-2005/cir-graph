@@ -1,0 +1,2 @@
+*.sh text eol=lf
+*.cir text eol=lf -diff linguist-generated
