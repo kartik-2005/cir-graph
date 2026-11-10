@@ -33,7 +33,7 @@ def main():
     outputs=[subprocess.check_output(c,text=True) for c in commands]
     data=extract(json.loads(outputs[0]),outputs[1],function_prefixes=a.function_prefix,constant_prefixes=a.constant_prefix,
         type_prefixes=a.type_prefix,type_names=a.type_name)
-    data['schemaVersion']='public-api-c-project-1'
+    data['schemaVersion']='v3-public-api-c-project-1'
     data['provenance']='Clang C declarations, object-like macros and function-macro name/parameter catalog'
     data['function_macros']=function_macros(outputs[1],a.function_prefix)
     data['limitations']=['No bodies, source excerpts, comments, tests or inferred behavioral contracts.',

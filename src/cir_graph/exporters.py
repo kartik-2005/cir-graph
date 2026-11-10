@@ -197,7 +197,7 @@ def _block_label(fn: Function, block, ops_by_id, max_ops: int) -> str:
 
 def to_dot(program: Program, max_ops_per_block: int = 14) -> str:
     out = [
-        "digraph cir_graph {",
+        "digraph v3 {",
         '  graph [compound=true, rankdir=TB, fontname="Helvetica", fontsize=12, '
         f'label="{_esc(program.name)} — unified CG / CFG / DFG", labelloc=t];',
         '  node [shape=box, style="rounded,filled", fontname="Courier", fontsize=9, fillcolor="#FFFFFF"];',

@@ -100,7 +100,7 @@ def extract(ast, macros, function_prefix="git_", constant_prefix="GIT_", *,
         if match and match.group(1).startswith(constant_prefixes):
             name, value = match.groups()
             constants.setdefault(name, {"name": name, "kind": "macro", "expression": value})
-    return {"schemaVersion": "public-api-1", "provenance": "Clang public declarations and object-like macros",
+    return {"schemaVersion": "v3-public-api-1", "provenance": "Clang public declarations and object-like macros",
             "limitations": ["No bodies, source excerpts, comments, tests or inferred behavioral contracts.",
                              "Macro expressions are preserved, not evaluated; function-like macros are excluded."],
             "functions": functions, "types": types, "constants": constants}

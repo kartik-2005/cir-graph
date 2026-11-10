@@ -96,7 +96,7 @@ REL_TABLES: List[Tuple[str, str, str, List[Column]]] = [
     ("ACCESSES_GLOBAL", "Operation", "GlobalVariable", []),
 ]
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "v3.2"
 REL_BY_NAME = {name: (src, dst, props) for name, src, dst, props in REL_TABLES}
 
 

@@ -1,10 +1,25 @@
 # cir-graph
 
-**Whole-program knowledge graphs from Clang IR.** cir-graph compiles C and C++ to
-[ClangIR (CIR)](https://llvm.github.io/clangir/) and builds **one layered graph**
-from it: call graph, control flow and data flow. The graph is stored in an
-embedded [Kùzu](https://kuzudb.com) database, and is also written as Cypher,
-JSON and Graphviz.
+**Give an AI model the program's graph instead of its source code.** cir-graph
+compiles C and C++ to [ClangIR (CIR)](https://llvm.github.io/clangir/) and builds
+**one layered whole-program graph**: call graph, control flow and data flow. A
+model doing static analysis (bug finding, test generation, program questions)
+works from this graph, not from the `.c`/`.cpp` files.
+
+The graph carries the program's semantics:
+
+* who calls whom across files
+* every branch and loop
+* which store each load can observe
+* how values move through calls
+
+It does **not** carry the source text: no comments and no source lines, which a
+test enforces. The model sees identifiers, types, literals, IR operations and
+file/line locations.
+
+The graph is stored in an embedded [Kùzu](https://kuzudb.com) database, which a
+model or tool can query with Cypher. It is also exported as layered JSON for
+prompts, a Cypher script, and Graphviz.
 
 ```
  MACRO    Program → TranslationUnit → Function ─CALLS→ Function        (call graph, cross-TU)
@@ -27,6 +42,27 @@ graph.
   argument/return bindings, and writes through pointer and reference parameters.
 * **Outputs:** a Kùzu database, an idempotent Cypher script, layered JSON for LLM
   prompts, and DOT/SVG.
+
+## Feeding the graph to a model
+
+* **Start small.** Give the model `summary` plus the `macro` layer of
+  `graph.json` (functions, calls, globals).
+* **Expand on demand.** Add `meso[f]` (CFG) and `micro[f]` (operations, values,
+  flows) only for the functions the question is about. These are keyed by
+  function ID. To follow a value across a call, use `bridges.callSites`.
+* **Or let the model query.** Give it read-only Cypher access to `graph.kuzu`
+  (or wrap `cir-graph-query` commands as tools). It can then ask for exactly the
+  slice it needs.
+* **Size matters.** A ~3,200-line C library (cJSON) gives about 12 MB of JSON,
+  so do not paste the whole file into a prompt.
+* **Absence is not evidence.** The graph is a may-dependence graph with known
+  gaps: no control dependence, no heap modeling, and no globals flowing between
+  functions. Tell the model what a missing edge does and does not mean; see
+  [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
+
+For larger codebases, `cir_graph.disk_store.DiskGraph` stores the graph in
+SQLite. It answers bounded `find`/`body`/`relations`/`bindings` lookups, which
+suit a model's tool calls; see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#large-projects).
 
 ## 60-second quickstart (no LLVM needed)
 
@@ -139,7 +175,7 @@ export CLANG=$PWD/llvm-project/build/bin/clang
 ## Tests
 
 ```sh
-python3 -m unittest discover -s tests -v                 # 78 tests, no LLVM needed
+python3 -m unittest discover -s tests -v                 # 79 tests, no LLVM needed
 CLANG=/path/to/clang python3 -m unittest discover -s tests   # also runs the source→graph tests
 ```
 

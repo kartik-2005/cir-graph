@@ -374,7 +374,7 @@ class ExportTests(unittest.TestCase):
         second = build_program([str(p) for p in sorted((CASES / "10_three_tu_chain").glob("*.cir"))], "x")
         self.assertEqual(import_statements(first), import_statements(second))
         self.assertEqual(to_dot(first), to_dot(second))
-        self.assertTrue(to_dot(first).startswith("digraph cir_graph {"))
+        self.assertTrue(to_dot(first).startswith("digraph v3 {"))
 
 
 @unittest.skipUnless(HAVE_KUZU, "kuzu not installed")

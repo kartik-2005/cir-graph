@@ -137,7 +137,7 @@ class DiskGraph:
                 **(self.meta('body_counts') or {}))
             self.set_meta('summary',summary)
             self.set_meta('analysisLimits',dict(storage='Per-TU compressed function bodies and global SQLite symbol/call index.',
-                memory='Existing memory analysis within each TU; pointer-write summaries are not propagated between TUs.',
+                memory='Existing v3 memory analysis within each TU; pointer-write summaries are not propagated between TUs.',
                 callBindings='Cross-TU argument/return bindings are generated from stored values on demand.',
                 globals='Per-TU global facts are retained; global-variable DFG is not propagated between TUs.',
                 recursion='Per-TU recursion facts retained; project-wide recursion and reachability are not recomputed.',

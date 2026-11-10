@@ -111,7 +111,7 @@ def extract_cpp(ast, type_names):
             for child in node.get("inner", []):
                 visit(child, scope)
     visit(ast)
-    return {"schemaVersion": "public-api-cpp-1", "types": types, "functions": functions,
+    return {"schemaVersion": "v3-public-api-cpp-1", "types": types, "functions": functions,
             "missing_types": sorted(selected - types.keys()),
             "limitations": ["Selected declared public members only; no source excerpts, bodies or behavioral contracts.",
                             "No template instantiation, inherited-member expansion, global enum/macro catalog or access inference.",

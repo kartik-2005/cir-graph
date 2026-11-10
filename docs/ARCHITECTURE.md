@@ -167,7 +167,7 @@ can share one database and re-imports are idempotent.
 | BasicBlock / Operation / Value | `<functionId>#bb<ordinal>` / `#op<seq>` / `#%<ssa>[.<k>]` |
 | GlobalVariable | `demo:gv:<mangled>`; static: `demo:gv:<tu>:<mangled>` |
 
-## Kùzu schema (schema version `1.0`)
+## Kùzu schema (schema version `v3.2`)
 
 Every node has `programId`.
 
@@ -211,7 +211,7 @@ every program in that database).
 
 ```jsonc
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "v3.2",
   "program": {"id": "demo", "name": "demo"},
   "summary": {"translationUnits": 2, "crossTUCalls": 3, "entryPoints": ["main"],
               "deadCode": ["never_called(int)"], "recursionCycles": [["fact(int)"]],
